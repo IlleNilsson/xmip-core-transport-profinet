@@ -368,31 +368,14 @@ impl Loopback for ProfinetTransport {
     /// In order on one thread: the device mirrors as the controller
     /// transmits, so the cycles go out first and the read-back takes them.
     fn round(&self, payload: &[u8]) -> Result<Arrived> {
-        let far = self.far_end()?;
-        self.send_to(far.address(), payload)?;
-        let arrived = far.take_one()?;
-        if arrived.bytes != payload {
-            return Err(protocol_error("cycled out, but what cycled back differs"));
-        }
-        Ok(arrived)
+        self.round_in_order(payload)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The shapes a protocol breaks on, as the Playground lists them.
-    fn edge_payloads() -> Vec<(&'static str, Vec<u8>)> {
-        vec![
-            ("empty", Vec::new()),
-            ("one byte", vec![0x2a]),
-            ("every byte", (0..=255).collect()),
-            ("nul run", vec![0; 512]),
-            ("high bytes", vec![0xff; 512]),
-            ("crlf storm", b"\r\n".repeat(400)),
-        ]
-    }
+    use transport::payload::edge_payloads;
 
     #[test]
     fn a_loopback_round_cycles_a_stream_out_and_mirrors_it_back() {
