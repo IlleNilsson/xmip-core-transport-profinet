@@ -31,6 +31,7 @@ pub use cyclic::Cyclic;
 pub use dcp::{Block, Dcp, Service};
 use ethernet::{Frame, Link, Mac};
 use transport::error::{Result, protocol_error};
+use transport::held::Held;
 use transport::loopback::{FarEnd, LOOPBACK_TIMEOUT, Loopback};
 use transport::{Arrived, Directions, Transport};
 
@@ -330,33 +331,21 @@ impl ProfinetTransport {
     }
 }
 
-/// The device mirroring the outputs it was sent, until they are read back
-/// as its inputs.
-struct Mirroring {
-    controller: ProfinetTransport,
-    address: String,
-}
-
-impl FarEnd for Mirroring {
-    fn address(&self) -> &str {
-        &self.address
-    }
-
-    fn take_one(self: Box<Self>) -> Result<Arrived> {
-        self.controller
-            .cycle_in()?
-            .ok_or_else(|| protocol_error("no cycle came back from the device"))
-    }
-}
-
 /// A Stream of any length rides as many cycles as it takes: no ceiling is a
 /// fact of the protocol.
 impl Loopback for ProfinetTransport {
+    /// The device mirroring the outputs it was sent, until they are read back
+    /// as its inputs.
     fn far_end(&self) -> Result<Box<dyn FarEnd>> {
-        Ok(Box::new(Mirroring {
-            controller: self.clone(),
-            address: format!("profinet://{}/{}", self.link.name(), self.device),
-        }))
+        let controller = self.clone();
+        Ok(Box::new(Held::new(
+            format!("profinet://{}/{}", self.link.name(), self.device),
+            move || {
+                controller
+                    .cycle_in()?
+                    .ok_or_else(|| protocol_error("no cycle came back from the device"))
+            },
+        )))
     }
 
     fn send_to(&self, address: &str, payload: &[u8]) -> Result<()> {
