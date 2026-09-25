@@ -352,12 +352,10 @@ impl Loopback for ProfinetTransport {
         self.send(address, payload)
     }
 
-    fn unblock(&self, _address: &str) {}
-
     /// In order on one thread: the device mirrors as the controller
     /// transmits, so the cycles go out first and the read-back takes them.
-    fn round(&self, payload: &[u8]) -> Result<Arrived> {
-        self.round_in_order(payload)
+    fn exchanges_in_order(&self) -> bool {
+        true
     }
 }
 
