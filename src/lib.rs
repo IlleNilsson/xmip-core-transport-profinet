@@ -21,6 +21,7 @@
 
 pub mod cyclic;
 pub mod dcp;
+mod settings;
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU16, AtomicU32, Ordering};
@@ -37,6 +38,9 @@ use transport::{Arrived, Directions, Transport};
 
 use crate::cyclic::{CYCLE_STEP, RT_CLASS_1_FIRST};
 use crate::dcp::{ETHERTYPE, MULTICAST};
+
+/// How long a controller waits on a device unless a Location says.
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(1);
 
 /// The controller's side of one link, exchanging cycles with one device.
 #[derive(Clone)]
@@ -60,7 +64,7 @@ impl ProfinetTransport {
             controller,
             device,
             frame_id: RT_CLASS_1_FIRST,
-            timeout: Duration::from_secs(1),
+            timeout: DEFAULT_TIMEOUT,
             cycle: Arc::new(AtomicU16::new(0)),
             xid: Arc::new(AtomicU32::new(1)),
         }
