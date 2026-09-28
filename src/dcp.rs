@@ -20,15 +20,15 @@ pub const MULTICAST: Mac = Mac([0x01, 0x0e, 0xcf, 0x00, 0x00, 0x00]);
 
 /// The `FrameID` of an identify request, of an identify response, and of a
 /// get or set and its response.
-pub const IDENTIFY_REQUEST: u16 = 0xfefe;
-pub const IDENTIFY_RESPONSE: u16 = 0xfeff;
-pub const GET_SET: u16 = 0xfefd;
+const IDENTIFY_REQUEST: u16 = 0xfefe;
+const IDENTIFY_RESPONSE: u16 = 0xfeff;
+const GET_SET: u16 = 0xfefd;
 
 /// The device properties option, and its name of station suboption.
 pub const OPTION_DEVICE: u8 = 0x02;
 pub const SUBOPTION_NAME: u8 = 0x02;
 /// The all selector: every option, every suboption.
-pub const OPTION_ALL: u8 = 0xff;
+const OPTION_ALL: u8 = 0xff;
 
 /// What a DCP frame asks or answers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

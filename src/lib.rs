@@ -31,6 +31,7 @@ use std::time::{Duration, Instant};
 pub use cyclic::Cyclic;
 pub use dcp::{Block, Dcp, Service};
 use ethernet::{Frame, Link, Mac};
+use net::Target;
 use transport::error::{Result, protocol_error};
 use transport::held::Held;
 use transport::loopback::{FarEnd, LOOPBACK_TIMEOUT, Loopback};
@@ -153,7 +154,7 @@ impl ProfinetTransport {
     ///
     /// # Errors
     /// Where the link refused a frame.
-    pub fn cycle_out(&self, device: Mac, bytes: &[u8]) -> Result<()> {
+    fn cycle_out(&self, device: Mac, bytes: &[u8]) -> Result<()> {
         let run = cyclic::cycles(self.frame_id, bytes, self.cycle.load(Ordering::Relaxed));
         let count = u16::try_from(run.len()).unwrap_or(u16::MAX);
         self.cycle
@@ -175,7 +176,7 @@ impl ProfinetTransport {
     /// # Errors
     /// A run of cycles that misses one or never ends, or a link that could
     /// not be read.
-    pub fn cycle_in(&self) -> Result<Option<Arrived>> {
+    fn cycle_in(&self) -> Result<Option<Arrived>> {
         let mut run = Vec::new();
         let deadline = Instant::now() + self.timeout;
         let from = loop {
@@ -221,7 +222,9 @@ impl Transport for ProfinetTransport {
     /// `target` may name a device, `profinet://eth0/02:00:00:00:00:02`,
     /// overriding the transport's.
     fn send(&self, target: &str, bytes: &[u8]) -> Result<()> {
-        let device = match transport::socket::target("profinet", target) {
+        let device = match Target::under(&["profinet"], target)
+            .map(|named| (named.authority(), named.path()))
+        {
             Some((_, mac)) if !mac.is_empty() => mac.parse()?,
             _ => self.device,
         };

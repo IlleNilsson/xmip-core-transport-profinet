@@ -15,7 +15,7 @@ pub const RT_CLASS_1_FIRST: u16 = 0x8000;
 pub const RT_CLASS_1_LAST: u16 = 0xbbff;
 
 /// The IO data one cycle carries: the smallest `C_SDU` the class allows.
-pub const IO_DATA: usize = 40;
+const IO_DATA: usize = 40;
 /// The length, the flag and two reserved bytes before a chunk.
 const PROLOGUE: usize = 4;
 /// The bytes of a Stream one cycle carries.
@@ -26,7 +26,7 @@ pub const CHUNK: usize = IO_DATA - PROLOGUE;
 pub const CYCLE_STEP: u16 = 32;
 
 /// A data status that says primary, valid, run, and nothing to report.
-pub const DATA_STATUS_GOOD: u8 = 0x35;
+const DATA_STATUS_GOOD: u8 = 0x35;
 
 /// One cyclic frame.
 #[derive(Clone, Debug, PartialEq, Eq)]
