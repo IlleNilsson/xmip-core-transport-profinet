@@ -18,6 +18,11 @@
 //! The origin URI names the link, the device and the `FrameID`:
 //! `profinet://<link>/<device mac>?frame=0x8000`. A target may name the
 //! device, `profinet://<link>/<mac>`, or nothing for the configured one.
+//!
+//! **Acceptance is at-most-once here** ([`AT_MOST_ONCE`]): cyclic IO data
+//! is process data, sent again every cycle and acknowledged by nobody, so
+//! the run is off the wire as it is read. Each Stream arrives whole, its
+//! cycles assembled.
 
 pub mod cyclic;
 pub mod dcp;
@@ -35,10 +40,14 @@ use net::Target;
 use transport::error::{Result, protocol_error};
 use transport::held::Held;
 use transport::loopback::{FarEnd, LOOPBACK_TIMEOUT, Loopback};
-use transport::{Arrived, Directions, Transport};
+use transport::{Acknowledgement, Arrived, Directions, Transport};
 
 use crate::cyclic::{CYCLE_STEP, RT_CLASS_1_FIRST};
 use crate::dcp::{ETHERTYPE, MULTICAST};
+
+/// Why a PROFINET Stream cannot be acknowledged after the receive cycle.
+pub const AT_MOST_ONCE: &str = "PROFINET cyclic IO data is acknowledged by nobody: each cycle \
+                                is process data, off the wire as it is read";
 
 /// How long a controller waits on a device unless a Location says.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(1);
@@ -171,7 +180,8 @@ impl ProfinetTransport {
     }
 
     /// The next Stream the cycles on the link carry to this controller, or
-    /// `None` when the link is quiet.
+    /// `None` when the link is quiet. Acceptance is at-most-once
+    /// ([`AT_MOST_ONCE`]).
     ///
     /// # Errors
     /// A run of cycles that misses one or never ends, or a link that could
@@ -201,7 +211,11 @@ impl ProfinetTransport {
             }
         };
         let origin = self.origin(from);
-        Ok(Some(Arrived::new(origin, cyclic::assemble(run)?)))
+        Ok(Some(Arrived::whole(
+            origin,
+            cyclic::assemble(run)?,
+            Acknowledgement::at_most_once(AT_MOST_ONCE),
+        )))
     }
 }
 
@@ -214,7 +228,13 @@ impl Transport for ProfinetTransport {
         Directions::BOTH
     }
 
-    /// Nothing on the link is not an error: an empty vector.
+    fn arrivals(&self) -> transport::Arrivals {
+        transport::Arrivals::Ordered("one line or bus, answered in the order it speaks")
+    }
+
+    /// Nothing on the link is not an error: an empty vector. Acceptance is
+    /// at-most-once here: cyclic IO data has no acknowledgement to defer
+    /// ([`AT_MOST_ONCE`]).
     fn receive(&self) -> Result<Vec<Arrived>> {
         Ok(self.cycle_in()?.into_iter().collect())
     }
@@ -350,7 +370,8 @@ impl Loopback for ProfinetTransport {
             move || {
                 controller
                     .cycle_in()?
-                    .ok_or_else(|| protocol_error("no cycle came back from the device"))
+                    .ok_or_else(|| protocol_error("no cycle came back from the device"))?
+                    .taken()
             },
         )))
     }
@@ -438,6 +459,8 @@ mod tests {
             .send("profinet://loopback/02:00:00:00:00:02", &[1, 2, 3])
             .expect("named");
         let arrived = controller.cycle_in().expect("in").expect("one");
+        assert!(!arrived.defers(), "cyclic IO data is at-most-once");
+        let arrived = arrived.taken().expect("taken");
         assert_eq!(arrived.bytes, [1, 2, 3]);
         assert_eq!(
             arrived.origin_uri,
