@@ -37,6 +37,7 @@ pub use cyclic::Cyclic;
 pub use dcp::{Block, Dcp, Service};
 use ethernet::{Frame, Link, Mac};
 use net::Target;
+use transport::ArrivalIdentity;
 use transport::error::{Result, protocol_error};
 use transport::held::Held;
 use transport::loopback::{FarEnd, LOOPBACK_TIMEOUT, Loopback};
@@ -211,11 +212,14 @@ impl ProfinetTransport {
             }
         };
         let origin = self.origin(from);
-        Ok(Some(Arrived::whole(
-            origin,
-            cyclic::assemble(run)?,
-            Acknowledgement::at_most_once(AT_MOST_ONCE),
-        )))
+        Ok(Some(
+            Arrived::whole(
+                origin,
+                cyclic::assemble(run)?,
+                Acknowledgement::at_most_once(AT_MOST_ONCE),
+            )
+            .from_peer_mac(&from),
+        ))
     }
 }
 
@@ -361,6 +365,10 @@ impl ProfinetTransport {
 /// A Stream of any length rides as many cycles as it takes: no ceiling is a
 /// fact of the protocol.
 impl Loopback for ProfinetTransport {
+    fn arrival_identity(&self) -> ArrivalIdentity {
+        ArrivalIdentity::PEER_MAC
+    }
+
     /// The device mirroring the outputs it was sent, until they are read back
     /// as its inputs.
     fn far_end(&self) -> Result<Box<dyn FarEnd>> {
