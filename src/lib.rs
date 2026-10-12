@@ -236,9 +236,12 @@ impl Transport for ProfinetTransport {
         transport::Arrivals::Ordered("one line or bus, answered in the order it speaks")
     }
 
-    /// Nothing on the link is not an error: an empty vector. Acceptance is
-    /// at-most-once here: cyclic IO data has no acknowledgement to defer
-    /// ([`AT_MOST_ONCE`]).
+    fn waiting(&self) -> transport::Waiting {
+        transport::Waiting::Waits("a read of the link waits for a cycle or its timeout")
+    }
+
+    /// Nothing on the link is not an error: an empty vector. Acceptance is at-most-once here:
+    /// cyclic IO data has no acknowledgement to defer ([`AT_MOST_ONCE`]).
     fn receive(&self) -> Result<Vec<Arrived>> {
         Ok(self.cycle_in()?.into_iter().collect())
     }
