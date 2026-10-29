@@ -42,7 +42,7 @@ use transport::ArrivalIdentity;
 use transport::error::{Result, protocol_error};
 use transport::held::Held;
 use transport::loopback::{FarEnd, LOOPBACK_TIMEOUT, Loopback};
-use transport::{Acknowledgement, Arrived, Directions, Transport};
+use transport::{Acknowledgement, Arrived, Configured, Directions, Transport};
 
 use crate::cyclic::{CYCLE_STEP, RT_CLASS_1_FIRST};
 use crate::dcp::{ETHERTYPE, MULTICAST};
@@ -255,7 +255,7 @@ impl Transport for ProfinetTransport {
     /// overriding the transport's.
     fn send_from(&self, target: &str, outgoing: transport::Outgoing<'_>) -> Result<()> {
         let bytes: &[u8] = &outgoing.gather()?;
-        let device = match Target::under(&["profinet"], target)
+        let device = match Target::under(Self::SCHEMES, target)
             .map(|named| (named.authority(), named.path()))
         {
             Some((_, mac)) if !mac.is_empty() => mac.parse()?,

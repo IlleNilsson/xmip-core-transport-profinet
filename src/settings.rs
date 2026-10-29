@@ -50,6 +50,9 @@ impl Configured for ProfinetTransport {
         ],
     };
 
+    /// The schemes a Location's address is entered with to choose this technology.
+    const SCHEMES: &'static [&'static str] = &["profinet"];
+
     /// The link is the carrier's: ethernet reads the address into one. A
     /// Receive Location cycles with whichever device answers it, so the
     /// unspecified address stands where a Send Location's device is.
