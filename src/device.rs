@@ -2,8 +2,9 @@
 //! loopback stands up (ADR-0051).
 
 use std::collections::VecDeque;
-use std::sync::{Mutex, PoisonError};
+use std::sync::Mutex;
 use std::time::Duration;
+use xcore::lock::Locked;
 
 use ethernet::{Frame, Link, Mac};
 use transport::error::Result;
@@ -32,18 +33,12 @@ impl Device {
     /// The device's name of station, as it is now.
     #[must_use]
     pub fn name(&self) -> String {
-        self.name
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone()
+        self.name.locked().clone()
     }
 
     fn answer(&self, to: Mac, payload: &[u8]) -> Result<()> {
         let frame = Frame::new(to, self.mac, ETHERTYPE, payload)?;
-        self.to_controller
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push_back(frame);
+        self.to_controller.locked().push_back(frame);
         Ok(())
     }
 
@@ -63,7 +58,7 @@ impl Device {
             }
             Service::Set => {
                 if let Some(name) = request.name() {
-                    *self.name.lock().unwrap_or_else(PoisonError::into_inner) = name;
+                    *self.name.locked() = name;
                 }
                 Vec::new()
             }
@@ -78,11 +73,7 @@ impl Link for Device {
     }
 
     fn receive(&self, _timeout: Duration) -> Result<Option<Frame>> {
-        Ok(self
-            .to_controller
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .pop_front())
+        Ok(self.to_controller.locked().pop_front())
     }
 
     /// A frame that is not PROFINET, or not for this device, is dropped the
