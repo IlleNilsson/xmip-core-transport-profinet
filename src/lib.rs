@@ -194,14 +194,14 @@ impl ProfinetTransport {
         let from = loop {
             match self.link.receive(self.timeout)? {
                 Some(frame)
-                    if frame.ethertype == ETHERTYPE && frame.destination == self.controller =>
+                    if frame.ethertype == ETHERTYPE
+                        && frame.destination == self.controller
+                        && let Ok(cycle) = Cyclic::decode(&frame.payload) =>
                 {
-                    if let Ok(cycle) = Cyclic::decode(&frame.payload) {
-                        let last = cycle.chunk()?.1;
-                        run.push(cycle);
-                        if last {
-                            break frame.source;
-                        }
+                    let last = cycle.chunk()?.1;
+                    run.push(cycle);
+                    if last {
+                        break frame.source;
                     }
                 }
                 Some(_) => {}
