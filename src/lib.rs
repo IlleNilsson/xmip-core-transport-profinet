@@ -89,13 +89,6 @@ impl ProfinetTransport {
         self
     }
 
-    /// Give up on a device that stops cycling.
-    #[must_use]
-    pub const fn timing_out_after(mut self, timeout: Duration) -> Self {
-        self.timeout = timeout;
-        self
-    }
-
     /// `profinet://<link>/<mac>?frame=0x<frame id>`.
     #[must_use]
     pub fn origin(&self, device: Mac) -> String {

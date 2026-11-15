@@ -40,18 +40,20 @@ impl Configured for ProfinetTransport {
                 meaning: "The real-time class 1 FrameID the cycles run under.",
                 applies: Applies::Both,
             },
-            Setting {
-                name: "timeout",
-                kind: Kind::Duration,
-                presence: Presence::Default(Fixed::Duration(DEFAULT_TIMEOUT)),
-                meaning: "How long a receive waits on a device that stops cycling.",
-                applies: Applies::Receive,
-            },
+            transport::configured::timeout(
+                Applies::Receive,
+                Some(DEFAULT_TIMEOUT),
+                "How long a receive waits on a device that stops cycling.",
+            ),
         ],
     };
 
     /// The schemes a Location's address is entered with to choose this technology.
     const SCHEMES: &'static [&'static str] = &["profinet"];
+
+    fn timeout_kept(&mut self) -> Option<&mut dyn transport::configured::TimeoutKept> {
+        Some(&mut self.timeout)
+    }
 
     /// The link is the carrier's: ethernet reads the address into one. A
     /// Receive Location cycles with whichever device answers it, so the
@@ -72,9 +74,6 @@ impl Configured for ProfinetTransport {
             let frame_id = u16::try_from(frame_id)
                 .map_err(|_| protocol_error("a FrameID is at most 0xffff"))?;
             transport = transport.under(frame_id);
-        }
-        if let Some(timeout) = settings.optional_duration("timeout") {
-            transport = transport.timing_out_after(timeout);
         }
         Ok(transport)
     }
