@@ -10,9 +10,7 @@
 
 use transport::error::{Result, protocol_error};
 
-/// The first and last `FrameID` of real-time class 1.
-pub const RT_CLASS_1_FIRST: u16 = 0x8000;
-pub const RT_CLASS_1_LAST: u16 = 0xbbff;
+use crate::declaration::{RT_CLASS_1_FIRST, RT_CLASS_1_LAST};
 
 /// The IO data one cycle carries: the smallest `C_SDU` the class allows.
 const IO_DATA: usize = 40;

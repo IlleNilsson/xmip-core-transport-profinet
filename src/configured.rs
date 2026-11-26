@@ -1,55 +1,17 @@
-//! The settings a PROFINET Location takes, declared once and read through
-//! (ADR-0064, amendment 2026-09-26).
+//! How a PROFINET Location is configured: `Configured`, reading the
+//! settings its [`declaration`](crate::declaration) declares once
+//! (ADR-0064, amendments 2026-09-26 and 2026-11-26).
 
 use ethernet::{EthernetTransport, Mac};
 use transport::Configured;
 use transport::error::{Result, protocol_error};
-use xcore::settings::{Applies, Fixed, Kind, Presence, Read, Setting, Settings};
+use xcore::settings::{Applies, Read, Settings};
 
-use crate::cyclic::{RT_CLASS_1_FIRST, RT_CLASS_1_LAST};
-use crate::{DEFAULT_TIMEOUT, ProfinetTransport};
+use crate::{ProfinetTransport, declaration};
 
 impl Configured for ProfinetTransport {
-    /// The address is the link the cycles go on, by its name, as the
-    /// ethernet carrier reads it.
-    const SETTINGS: &'static Settings = &Settings {
-        technology: env!("CARGO_PKG_NAME"),
-        settings: &[
-            Setting {
-                name: "controller",
-                kind: Kind::Address,
-                presence: Presence::Required,
-                meaning: "The MAC address this controller cycles from and is cycled to.",
-                applies: Applies::Both,
-            },
-            Setting {
-                name: "device",
-                kind: Kind::Address,
-                presence: Presence::Required,
-                meaning: "The MAC address of the IO device a Send Location cycles with unless \
-                          the target names another.",
-                applies: Applies::Send,
-            },
-            Setting {
-                name: "frame_id",
-                kind: Kind::Integer {
-                    minimum: RT_CLASS_1_FIRST as i64,
-                    maximum: RT_CLASS_1_LAST as i64,
-                },
-                presence: Presence::Default(Fixed::Integer(RT_CLASS_1_FIRST as i64)),
-                meaning: "The real-time class 1 FrameID the cycles run under.",
-                applies: Applies::Both,
-            },
-            transport::configured::timeout(
-                Applies::Receive,
-                Some(DEFAULT_TIMEOUT),
-                "How long a receive waits on a device that stops cycling.",
-            ),
-        ],
-    };
-
-    /// The schemes a Location's address is entered with to choose this technology.
-    const SCHEMES: &'static [&'static str] = &["profinet"];
+    const SETTINGS: &'static Settings = declaration::SETTINGS;
+    const SCHEMES: &'static [&'static str] = declaration::SCHEMES;
 
     fn timeout_kept(&mut self) -> Option<&mut dyn transport::configured::TimeoutKept> {
         Some(&mut self.timeout)
@@ -99,7 +61,10 @@ mod tests {
         assert_eq!(built.device, Mac([2, 0, 0, 0, 0, 2]));
         assert_eq!(built.frame_id, 0x8001);
         let received = ProfinetTransport::open("loopback", Applies::Receive, &given[..1]);
-        assert_eq!(received.expect("built").timeout, DEFAULT_TIMEOUT);
+        assert_eq!(
+            received.expect("built").timeout,
+            declaration::DEFAULT_TIMEOUT
+        );
         let late = [
             text("controller", "02:00:00:00:00:01"),
             text("timeout", "5s"),

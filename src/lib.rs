@@ -23,38 +23,67 @@
 //! is process data, sent again every cycle and acknowledged by nobody, so
 //! the run is off the wire as it is read. Each Stream arrives whole, its
 //! cycles assembled.
+//!
+//! **Built with its `declaration` feature alone** the crate is
+//! [`declaration`], what a Location of it is configured with, and none of
+//! the code above, which is behind the default feature: what the surfaces'
+//! library carries (ADR-0064, amendment 2026-11-26). The real-time class 1
+//! `FrameID`s a Location's `frame_id` is held to and the wait it takes
+//! unless it says are declared there with it.
 
+#[cfg(feature = "default")]
+mod configured;
+#[cfg(feature = "default")]
 pub mod cyclic;
+#[cfg(feature = "default")]
 pub mod dcp;
+#[cfg(feature = "declaration")]
+pub mod declaration;
+#[cfg(feature = "default")]
 mod device;
-mod settings;
 
+#[cfg(feature = "default")]
 use std::sync::Arc;
+#[cfg(feature = "default")]
 use std::sync::atomic::{AtomicU16, AtomicU32, Ordering};
+#[cfg(feature = "default")]
 use std::time::{Duration, Instant};
 
+#[cfg(feature = "default")]
 pub use cyclic::Cyclic;
+#[cfg(feature = "default")]
 pub use dcp::{Block, Dcp, Service};
+#[cfg(feature = "default")]
 pub use device::Device;
+#[cfg(feature = "default")]
 use ethernet::{Frame, Link, Mac};
+#[cfg(feature = "default")]
 use net::Target;
+#[cfg(feature = "default")]
 use transport::ArrivalIdentity;
+#[cfg(feature = "default")]
 use transport::error::{Result, protocol_error};
+#[cfg(feature = "default")]
 use transport::held::Held;
+#[cfg(feature = "default")]
 use transport::loopback::{FarEnd, LOOPBACK_TIMEOUT, Loopback};
+#[cfg(feature = "default")]
 use transport::{Acknowledgement, Arrived, Configured, Directions, Transport};
 
-use crate::cyclic::{CYCLE_STEP, RT_CLASS_1_FIRST};
+#[cfg(feature = "default")]
+use crate::cyclic::CYCLE_STEP;
+#[cfg(feature = "default")]
 use crate::dcp::{ETHERTYPE, MULTICAST};
+#[cfg(feature = "default")]
+use crate::declaration::{DEFAULT_TIMEOUT, RT_CLASS_1_FIRST};
 
 /// Why a PROFINET Stream cannot be acknowledged after the receive cycle.
+#[cfg(feature = "default")]
 pub const AT_MOST_ONCE: &str = "PROFINET cyclic IO data is acknowledged by nobody: each cycle \
                                 is process data, off the wire as it is read";
 
-/// How long a controller waits on a device unless a Location says.
-pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(1);
-
 /// The controller's side of one link, exchanging cycles with one device.
+#[cfg(feature = "default")]
 #[derive(Clone)]
 pub struct ProfinetTransport {
     link: Arc<dyn Link>,
@@ -66,6 +95,7 @@ pub struct ProfinetTransport {
     xid: Arc<AtomicU32>,
 }
 
+#[cfg(feature = "default")]
 impl ProfinetTransport {
     /// A controller at `controller` on `link`, cycling with `device` under
     /// the first class 1 `FrameID`.
@@ -217,6 +247,7 @@ impl ProfinetTransport {
     }
 }
 
+#[cfg(feature = "default")]
 impl Transport for ProfinetTransport {
     fn name(&self) -> &'static str {
         "profinet"
@@ -258,6 +289,7 @@ impl Transport for ProfinetTransport {
     }
 }
 
+#[cfg(feature = "default")]
 impl ProfinetTransport {
     /// Both ends on one in-process link: a controller and one device named
     /// `loopback`, the loopback timeout on the controller.
@@ -275,6 +307,7 @@ impl ProfinetTransport {
 
 /// A Stream of any length rides as many cycles as it takes: no ceiling is a
 /// fact of the protocol.
+#[cfg(feature = "default")]
 impl Loopback for ProfinetTransport {
     fn arrival_identity(&self) -> ArrivalIdentity {
         ArrivalIdentity::PEER_MAC
